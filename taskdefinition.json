@@ -1,0 +1,37 @@
+{
+  "family": "ecs-TaskDefinition",
+  "executionRoleArn": "arn:aws:iam::123456789:role/TaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::123456789:role/TaskRole",
+  "networkMode": "host",
+  "containerDefinitions": [
+    {
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/ecs_us-east-1-123456789",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "name": "ecs_container",
+      "image": "123456789.dkr.ecr.us-east-1.amazonaws.com/repo:image-tag",
+      "cpu": 123,
+      "memoryReservation": 123,
+      "essential": true,
+      "mountPoints": [
+        {
+          "containerPath": "/tmp",
+          "sourceVolume": "ecsvolume"
+        }
+      ]
+    }
+  ],
+  "volumes": [
+    {
+      "host": {
+        "sourcePath": "/home/ec2-user/logs"
+      },
+      "name": "ecsvolume"
+    }
+  ]
+}
