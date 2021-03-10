@@ -1,0 +1,31 @@
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - echo Logging into ECR
+      - $(aws ecr get-login --region $AWS_DEFAULT_REGION --no-include-email)
+      - REPOSITORY_URI=$AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/$IMAGE_REPO_NAME
+      - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION)
+      - IMAGE_TAG=${COMMIT_HASH:=latest}
+  build:
+    commands:
+      - cd docker
+      - echo Build started on `date`
+      - echo Building the Docker image..      
+      - docker build -t $REPOSITORY_URI:latest .
+      - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$IMAGE_TAG
+  post_build:
+    commands:
+      - cd ..
+      - echo Build is successful...
+      - echo Pushing the docker image
+      - docker push $REPOSITORY_URI:latest
+      - docker push $REPOSITORY_URI:$IMAGE_TAG
+      - export IMAGE_URI=$REPOSITORY_URI:$IMAGE_TAG
+      - echo Updating image uri in taskdefinition file..
+      - jq --arg a "${IMAGE_URI}" '.containerDefinitions[0].image = $a' taskdefinition.json > "tmp" && mv "tmp" taskdefinition.json
+      - echo Registering new version of task definition 
+      - aws ecs register-task-definition --cli-input-json file://taskdefinition.json
+      - echo Updating the service with new task definition
+      - aws ecs update-service --cluster $CLUSTER_NAME --service $SERVICE_NAME --task-definition $TASK_DEFINITION
